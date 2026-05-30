@@ -1,0 +1,38 @@
+contract_id: report.generate
+version: 1.0.0
+description: Generate a report (summary, monthly, etc.) with a row budget.
+
+intent_examples:
+  - Generate a summary report
+  - Build a monthly report with 5000 rows
+  - Produce a detailed report
+  - Run a daily report with 100 rows
+
+permissions:
+  - analyst
+  - sales_admin
+
+input_schema:
+  kind:
+    type: string
+    required: true
+    description: One of summary | detailed | monthly | weekly | daily.
+  rows:
+    type: integer
+    required: false
+    description: Maximum number of rows.
+
+validation_rules: []
+
+allowed_tools:
+  - report_service
+
+output_schema:
+  report_id:
+    type: string
+  url:
+    type: string
+  kind:
+    type: string
+  rows:
+    type: integer

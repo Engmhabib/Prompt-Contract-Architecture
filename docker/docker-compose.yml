@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pca
+      POSTGRES_PASSWORD: pca
+      POSTGRES_DB: pca
+    ports:
+      - "5432:5432"
+    volumes:
+      - pca_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pca"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      PCA_DATABASE_URL: postgresql+asyncpg://pca:pca@postgres:5432/pca
+      PCA_CONTRACTS_DIR: /app/contracts
+      PCA_JWT_SECRET: dev-secret
+      PCA_DEV_MODE: "true"
+      PCA_LLM_PROVIDER: ${PCA_LLM_PROVIDER:-mock}
+      PCA_LLM_MODEL: ${PCA_LLM_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pca_pg:

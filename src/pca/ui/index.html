@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PCA Playground</title>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>📜</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#f5f7ff', 100:'#e8edff', 500:'#4f46e5', 600:'#4338ca', 700:'#3730a3' },
+            ink:  { 900:'#0b1020', 700:'#1f2937', 500:'#6b7280', 300:'#d1d5db' }
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','sans-serif'],
+            mono: ['JetBrains Mono','ui-monospace','SFMono-Regular','monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style type="text/tailwindcss">
+    .nav-btn { @apply w-full text-left px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white transition-colors; }
+    .nav-btn.active { @apply bg-slate-800 text-white font-medium; }
+    .input { @apply border border-slate-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500; }
+    .btn { @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors; }
+    .btn-primary { @apply bg-brand-500 text-white hover:bg-brand-600; }
+    .btn-ghost { @apply text-ink-700 hover:bg-slate-100; }
+    .h2 { @apply text-lg font-semibold tracking-tight; }
+    .h3 { @apply text-sm font-semibold tracking-tight text-ink-700 uppercase; }
+    .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-ink-700; }
+    .badge-ok { @apply bg-emerald-100 text-emerald-700; }
+    .badge-warn { @apply bg-amber-100 text-amber-700; }
+    .badge-err { @apply bg-rose-100 text-rose-700; }
+    .badge-info { @apply bg-brand-100 text-brand-700; }
+    .chip { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-200 text-ink-700; }
+    .chip button { @apply text-ink-500 hover:text-rose-600; }
+    .code-block { @apply bg-ink-900 text-slate-100 rounded-md p-3 overflow-auto text-xs font-mono whitespace-pre-wrap; }
+    .th { @apply text-left px-3 py-2 font-semibold; }
+    td { @apply px-3 py-2 align-top; }
+    .step { @apply flex items-start gap-2; }
+    .step-dot { @apply mt-1 w-2 h-2 rounded-full bg-slate-300; }
+    .step.done .step-dot { @apply bg-emerald-500; }
+    .step.skip .step-dot { @apply bg-slate-300; }
+    .step.err  .step-dot { @apply bg-rose-500; }
+    .step.now  .step-dot { @apply bg-brand-500 animate-pulse; }
+    .step .label { @apply text-ink-700; }
+    .step.done .label { @apply text-ink-900; }
+    .step.err  .label { @apply text-rose-700; }
+    .contract-item { @apply w-full text-left px-3 py-2 rounded-md hover:bg-slate-100 text-sm flex items-center justify-between; }
+    .contract-item.active { @apply bg-brand-50 ring-1 ring-brand-500/30; }
+  </style>
+</head>
+<body class="bg-slate-50 text-ink-900 font-sans antialiased">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 shrink-0 bg-ink-900 text-slate-200 flex flex-col">
+      <div class="px-5 py-5 border-b border-slate-700/60">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-brand-500 flex items-center justify-center font-bold">P</div>
+          <div>
+            <div class="font-semibold text-white">PCA</div>
+            <div class="text-xs text-slate-400">Prompt Contract Arch.</div>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 px-2 py-4 space-y-1 text-sm">
+        <button data-tab="invoke"    class="nav-btn">▶  Invoke</button>
+        <button data-tab="contracts" class="nav-btn">📑 Contracts</button>
+        <button data-tab="audit"     class="nav-btn">🧾 Audit Log</button>
+        <button data-tab="tests"     class="nav-btn">🧪 Tests</button>
+        <button data-tab="docs"      class="nav-btn">📘 Docs</button>
+      </nav>
+      <div class="px-4 py-3 border-t border-slate-700/60 text-xs text-slate-400">
+        <div class="flex justify-between"><span>Health</span><span id="health-dot" class="text-slate-500">…</span></div>
+        <div class="mt-2 flex justify-between"><span>LLM</span><span id="llm-info" class="text-slate-300">—</span></div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col min-w-0">
+      <!-- Identity bar -->
+      <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-ink-500">User</label>
+          <input id="user-sub" value="alice" class="input w-32" />
+        </div>
+        <div class="flex items-center gap-2 flex-1">
+          <label class="text-xs text-ink-500">Roles</label>
+          <div id="role-chips" class="flex flex-wrap gap-1.5"></div>
+          <input id="role-input" placeholder="add role + Enter" class="input w-44 text-xs" />
+        </div>
+        <button id="mint-btn" class="btn btn-primary">Mint JWT</button>
+        <div class="text-xs text-ink-500 font-mono truncate max-w-[160px]" id="token-preview">no token</div>
+      </header>
+
+      <!-- Tab panels -->
+      <section class="flex-1 overflow-auto">
+        <!-- INVOKE -->
+        <div data-panel="invoke" class="panel p-6 grid grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <h2 class="h2">Invoke a contract from natural language</h2>
+            <textarea id="prompt-input" rows="6" class="input w-full font-mono text-sm"
+              placeholder="e.g. Create a customer named John Doe, john@example.com"></textarea>
+            <div class="flex items-center gap-3">
+              <input id="hint-input" placeholder="optional: contract_id@version" class="input flex-1 text-sm font-mono" />
+              <button id="invoke-btn" class="btn btn-primary">Invoke →</button>
+            </div>
+            <div>
+              <div class="text-xs text-ink-500 mb-1">Sample prompts</div>
+              <div class="flex flex-wrap gap-2" id="samples"></div>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <h3 class="h3">Pipeline</h3>
+              <span id="invoke-status" class="badge">idle</span>
+            </div>
+            <ol id="pipeline" class="space-y-1.5 text-sm"></ol>
+            <h3 class="h3 mt-4">Response</h3>
+            <pre id="invoke-result" class="code-block max-h-[460px]">—</pre>
+          </div>
+        </div>
+
+        <!-- CONTRACTS -->
+        <div data-panel="contracts" class="panel hidden p-6 grid grid-cols-[320px_1fr] gap-6">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="h2">Contracts</h2>
+              <button id="reload-contracts" class="btn btn-ghost text-xs">↻</button>
+            </div>
+            <ul id="contract-list" class="space-y-1"></ul>
+          </div>
+          <div class="space-y-3">
+            <h3 class="h3">Details</h3>
+            <pre id="contract-detail" class="code-block max-h-[640px]">Select a contract.</pre>
+          </div>
+        </div>
+
+        <!-- AUDIT -->
+        <div data-panel="audit" class="panel hidden p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <h2 class="h2">Audit Log</h2>
+            <button id="reload-audit" class="btn btn-ghost text-xs">↻ Refresh</button>
+            <div class="text-xs text-ink-500">requires <code>admin</code> or <code>auditor</code> role</div>
+          </div>
+          <div class="overflow-auto border rounded-lg bg-white">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-100 text-ink-700 text-xs uppercase tracking-wide">
+                <tr>
+                  <th class="th">When</th><th class="th">User</th><th class="th">Contract</th>
+                  <th class="th">Status</th><th class="th">Prompt</th><th class="th">Detail</th>
+                </tr>
+              </thead>
+              <tbody id="audit-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TESTS -->
+        <div data-panel="tests" class="panel hidden p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <h2 class="h2">Generated tests</h2>
+            <select id="test-contract" class="input text-sm"></select>
+            <button id="run-tests" class="btn btn-primary">Run</button>
+            <div class="text-xs text-ink-500">requires <code>admin</code> or <code>developer</code> role</div>
+          </div>
+          <div id="test-summary" class="text-sm"></div>
+          <div class="overflow-auto border rounded-lg bg-white">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-100 text-ink-700 text-xs uppercase tracking-wide">
+                <tr>
+                  <th class="th">Case</th><th class="th">Expected</th>
+                  <th class="th">Actual</th><th class="th">Pass</th><th class="th">Detail</th>
+                </tr>
+              </thead>
+              <tbody id="test-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DOCS -->
+        <div data-panel="docs" class="panel hidden p-6 grid grid-cols-[320px_1fr] gap-6">
+          <div>
+            <h2 class="h2 mb-2">Contract docs</h2>
+            <ul id="docs-list" class="space-y-1"></ul>
+          </div>
+          <article id="docs-view" class="prose prose-sm max-w-none bg-white border rounded-lg p-6">Select a contract.</article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-4 right-4 bg-ink-900 text-white text-sm px-4 py-2 rounded-md shadow-lg"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

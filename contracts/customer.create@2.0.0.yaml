@@ -1,0 +1,39 @@
+contract_id: customer.create
+version: 2.0.0
+description: Create a new customer — v2 adds optional phone.
+
+intent_examples:
+  - Create a customer named John with phone 555-1234
+  - Register Sarah, email sarah@acme.com, phone +1 415 555 0100
+  - Add a new customer including their phone number
+
+permissions:
+  - sales_admin
+
+input_schema:
+  name:
+    type: string
+    required: true
+  email:
+    type: string
+    required: true
+  phone:
+    type: string
+    required: false
+    description: Optional phone number.
+
+validation_rules:
+  - valid_email
+  - unique_email
+  - non_empty_name
+
+allowed_tools:
+  - customer_db
+
+output_schema:
+  customer_id:
+    type: string
+  name:
+    type: string
+  email:
+    type: string
