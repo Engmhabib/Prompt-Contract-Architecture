@@ -12,6 +12,7 @@ Client → FastAPI (PCA Runtime) → LLM → Tools → Services → Database
                        │
                        └── Contract Registry (YAML, source of truth)
 ```
+<img width="1448" height="756" alt="image" src="https://github.com/user-attachments/assets/06913fa0-63a5-4405-a51f-7d36f16a942d" />
 
 ## Why PCA?
 
